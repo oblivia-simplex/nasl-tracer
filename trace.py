@@ -29,10 +29,11 @@ def prettify_trace (filename, depth, focus):
             frame_stack.append(frame(row))
         elif (s == -1):
             r = frame_stack.pop()
-        if ((depth == 0 or depth >= indent) and (focus == "" or (focus in [r]+frame_stack))):
+        if ((depth == 0 or depth > indent) and
+            (focus == "" or (focus in [r]+frame_stack))):
             print ("  "*max(0,indent))+row[:-1],
             if (s == -1):
-                print "from "+r
+                print "[from "+r+"]"
                 r=""
             else:
                 print
