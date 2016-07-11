@@ -18,7 +18,7 @@ def step(row):
 def frame(row):
     return row.split(" ")[1].split("(")[0]
 
-def prettify_trace (filename, depth, focus):
+def prettify_trace (filename, depth, focus, show_origins):
     tracerows=[r.split("(TRACE) ")[1] for r in open(filename).readlines()]
     indent=0
     frame_stack=[]
@@ -35,6 +35,8 @@ def prettify_trace (filename, depth, focus):
             if (s == -1):
                 print "[from "+r+"]"
                 r=""
+            elif (show_origins and len(frame_stack) > 1):
+                print "[from "+frame_stack[-2]+"]"
             else:
                 print
         indent += s
@@ -55,8 +57,11 @@ def main ():
                         default="",
                         help="if you would like to restrict the"+
                         " view to just one function, name it")
+    parser.add_argument("--sources", "-s", type=bool, default=False,
+                        metavar="<True|False>",
+                        help="display the name of the function from which each function is called")
     args = parser.parse_args()
-    prettify_trace(args.tracefile, args.depth, args.function)
+    prettify_trace(args.tracefile, args.depth, args.function, args.sources)
 
 if __name__ == "__main__":
     main()
