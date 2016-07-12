@@ -16,19 +16,25 @@ def step(row):
         return 0
 
 def frame(row):
-    return row.split(" ")[1].split("(")[0]
+    fr = row.split(" ")[1].split("(")[0]
+    if (fr == ""):
+        fr = "INTERNAL"
+    return fr
 
 def prettify_trace (filename, depth, focus, show_origins):
     tracerows=[r.split("(TRACE) ")[1] for r in open(filename).readlines()]
     indent=0
-    frame_stack=[]
-    r=""
+    r="MAIN"
+    frame_stack=[r]
     for row in tracerows:
         s = step(row)
         if (s == 1):
             frame_stack.append(frame(row))
         elif (s == -1):
-            r = frame_stack.pop()
+            try:
+                r = frame_stack.pop()
+            except:
+                print "<< call stack anomaly >>"
         if ((depth == 0 or depth > indent) and
             (focus == "" or (focus in [r]+frame_stack))):
             print ("  "*max(0,indent))+row[:-1],
