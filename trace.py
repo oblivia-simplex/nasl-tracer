@@ -3,7 +3,7 @@
 # Developed by Olivia Lucca Fraser
 # for Tenable Network Security
 
-from sys import argv
+import sys
 import argparse
 import math
 
@@ -75,7 +75,25 @@ def display_timing_info (listing, sortby):
         print p[0] + ": {:f}s over {:d} call{:s}, avg: {:f}s".format(p[1],p[2], ("" if p[2] == 1 else "s"), p[3])
     return stats
 
-def prettify_trace (filename, depth, focus, show_origins, enum, timing_info):
+def abridge_args (fnstring, abridge_len, s):
+    fnstring = fnstring.strip()
+    splitter = "(" if s == 1 else "->"
+    splitat = 1
+    if "call (internal)" in fnstring:
+        splitter = ")("
+    if splitter not in fnstring:
+        return fnstring
+    if (len(fnstring.split(splitter)[splitat]) <= abridge_len):
+        return fnstring
+    else:
+        parts = fnstring.split(splitter, 1)
+        chunk = parts[1][:abridge_len]
+        return parts[0] + splitter + chunk + \
+            (("" if ")" in chunk else "...)") if s == 1 else "...")
+
+def prettify_trace (filename, depth=0, focus="MAIN",
+                    show_origins=False, enum=False,
+                    timing_info="", abridge=1024, quiet=False):
     split_rows=[r.split("(TRACE) ") for r in open(filename).readlines()]
     indent=0
     n=0
@@ -85,10 +103,10 @@ def prettify_trace (filename, depth, focus, show_origins, enum, timing_info):
     frame_stack = [("MAIN", frame_time(split_rows[0])[1])]
     fmt="{:"+str(int(math.ceil(math.log(len(split_rows), 10))))+"d}"
     for split_row in split_rows:
-        action     = split_row[1]
+        s = step(split_row[1])
+        action = abridge_args(split_row[1], abridge, s)
         ft = frame_time(split_row)
         n += 1
-        s = step(action)
         if (s == 1): # 1 = call, -1 = ret, 0 = ?
             frame_stack.append(ft)
         elif (s == -1):
@@ -98,13 +116,14 @@ def prettify_trace (filename, depth, focus, show_origins, enum, timing_info):
                 ret_elapsed  = ft[1] - r_ft[1];
                 elapsed_frames.append((ret_from, ret_elapsed))
             except:
-                print "<< call stack anomaly at line",n,">>"
+                print >> sys.stderr, "<< call stack anomaly at line",n,">>"
                 return
-        if ((depth == 0 or depth > indent) and
-            (focus == "" or (focus in [ret_from]+[f[0] for f in frame_stack]))):
+        ### Here's the noisy section:
+        if ((not quiet) and (depth == 0 or depth > indent) and
+            (focus in [ret_from]+[f[0] for f in frame_stack])):
             if (enum):
                 print fmt.format(n),
-            print ("  "*max(0,indent))+action[:-1],
+            print ("  "*max(0,indent))+action,
             if (s == -1):
                 print "[from "+ret_from+" after "+str(ret_elapsed)+"s]"
                 r=""
@@ -112,6 +131,7 @@ def prettify_trace (filename, depth, focus, show_origins, enum, timing_info):
                 print "[from "+frame_stack[-2][0]+"]"
             else:
                 print
+        ### End of noisy section ###
         indent += s
     if (timing_info):
         display_timing_info(elapsed_frames, timing_info)
@@ -131,7 +151,7 @@ def main ():
                         " stack, in absolute terms")
     parser.add_argument("--function", "-f", metavar="<function name>",
                         type=str,
-                        default="",
+                        default="MAIN",
                         help="if you would like to restrict the"+
                         " view to just one function, name it")
     parser.add_argument("--sources", "-s", action="store_true", default=False,
@@ -142,12 +162,18 @@ def main ():
                         help="specify the attribute by which to sort the timing information")
     parser.add_argument("--enum", "-n", action="store_true", default=False,
                         help="enumerate the trace lines")
+    parser.add_argument("--quiet", "-q", action="store_true", default=False)
+    parser.add_argument("--abridge", "-a", type=int,
+                        default=1024, help="abridge arguments longer "+
+                        "than <n> characters", metavar="<n>")
     args = parser.parse_args()
     prettify_trace(filename=args.tracefile,
                    depth=args.depth,
                    focus=args.function,
                    show_origins=args.sources,
                    enum=args.enum,
+                   quiet=args.quiet,
+                   abridge=args.abridge,
                    timing_info=args.timing)
 
 if __name__ == "__main__":
