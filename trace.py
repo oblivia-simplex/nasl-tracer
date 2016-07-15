@@ -8,6 +8,33 @@ import argparse
 import math
 
 ATTRIBUTES = ["name", "total", "frequency", "average"]
+COLOUR_ON = True
+RAINBOW = ["yellow","green","blue","cyan","magenta","red"]
+
+def colour(hue, shade="dark"):
+    global COLOUR_ON
+    if (not COLOUR_ON):
+        return ""
+    hues = {
+        "reset":"0"
+        ,"black":"30"
+        ,"red":"31"
+        ,"green":"32"
+        ,"yellow":"33"
+        ,"blue":"34"
+        ,"magenta":"35"
+        ,"cyan":"36"
+    }
+    shades = {
+        "dark":"0"
+        ,"light":"1"
+    }
+    return "\x1b["+shades[shade]+";"+hues[hue]+"m"
+
+def rainbow(indent, light='light'):
+    global RAINBOW
+    l = len(RAINBOW)
+    return colour(RAINBOW[indent % l],light)
 
 def attribute_string ():
     global ATTRIBUTES
@@ -87,15 +114,13 @@ def abridge_args (fnstring, abridge_len, s):
         splitter = ")("
     if splitter not in fnstring:
         return fnstring
-    if (len(fnstring.split(splitter)[splitat])
-        <= abridge_len):
+    parts = fnstring.split(splitter, 1)
+    if (len(parts[1]) <= abridge_len):
         return fnstring
     else:
-        parts = fnstring.split(splitter, 1)
         chunk = parts[1][:abridge_len]
         return parts[0] + splitter + chunk + \
-            (("" if ")" in chunk else "...)") if s == 1
-             else "...")
+            ("...)" if s == 1 else "...")
 
 def prettify_trace (filename, depth=0, focus="MAIN",
                     show_origins=False, enum=False,
@@ -127,7 +152,8 @@ def prettify_trace (filename, depth=0, focus="MAIN",
                                        ret_elapsed))
             except:
                 print >> sys.stderr, \
-                    "<< call stack anomaly at line",n,">>"
+                    colour('red','light')+"<< call stack anomaly at line",n,">>"+ \
+                    colour('reset')
                 return
         ### Here's the noisy section:
         if ((not quiet) and (depth == 0 or depth > indent)
@@ -135,14 +161,14 @@ def prettify_trace (filename, depth=0, focus="MAIN",
                  [f[0] for f in frame_stack])):
             if (enum):
                 print fmt.format(n),
-            print ("  "*max(0,indent))+action,
+            print rainbow(indent)+("  "*max(0,indent))+action+colour('reset'),
             if (s == -1):
-                print "[from {:s} after {:.8f}s]"\
-                    .format(ret_from, ret_elapsed)
+                print rainbow(indent,'dark')+"[from {:s} after {:.8f}s]"\
+                    .format(ret_from, ret_elapsed) + colour('reset')
                 r=""
             elif (show_origins and len(frame_stack) > 1):
-                print "[from {:s}]"\
-                    .format(frame_stack[-2][0])
+                print rainbow(indent,'dark')+"[from {:s}]"\
+                    .format(frame_stack[-2][0]) + colour('reset')
             else:
                 print
         ### End of noisy section ###
@@ -153,6 +179,7 @@ def prettify_trace (filename, depth=0, focus="MAIN",
 
 
 def main ():
+    global COLOUR_ON
     parser = argparse.ArgumentParser(description =
                                      "Reconstruct call stack from nasl -T"+
                                      " trace, and structure trace output "+
@@ -180,7 +207,10 @@ def main ():
     parser.add_argument("--abridge", "-a", type=int,
                         default=1024, help="abridge arguments longer "+
                         "than <n> characters", metavar="<n>")
+    parser.add_argument("--rainbow", "-r", action="store_true", default=False,
+                        help="colour-code the call stack")
     args = parser.parse_args()
+    COLOUR_ON = args.rainbow
     prettify_trace(filename=args.tracefile,
                    depth=args.depth,
                    focus=args.function,
