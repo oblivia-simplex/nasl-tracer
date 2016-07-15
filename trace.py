@@ -157,15 +157,14 @@ def prettify_trace (filename, depth=0, focus="MAIN",
                 return
         ### Here's the noisy section:
         if ((not quiet) and (depth == 0 or depth > indent)
-            and (focus in [ret_from]+
-                 [f[0] for f in frame_stack])):
+            and (focus in [ret_from]+[f[0] for f in frame_stack])):
             if (enum):
-                print fmt.format(n),
+                print colour('black','light')+fmt.format(n)+colour('reset'),
             print rainbow(indent)+("  "*max(0,indent))+action+colour('reset'),
             if (s == -1):
                 print rainbow(indent,'dark')+"[from {:s} after {:.8f}s]"\
                     .format(ret_from, ret_elapsed) + colour('reset')
-                r=""
+                ret_from=""
             elif (show_origins and len(frame_stack) > 1):
                 print rainbow(indent,'dark')+"[from {:s}]"\
                     .format(frame_stack[-2][0]) + colour('reset')
