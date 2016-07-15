@@ -72,7 +72,11 @@ def display_timing_info (listing, sortby):
     print "-----------------------------------------------"
  
     for p in sorted(stats, key=(lambda e: e[idx])):
-        print p[0] + ": {:f}s over {:d} call{:s}, avg: {:f}s".format(p[1],p[2], ("" if p[2] == 1 else "s"), p[3])
+        print p[0] + (": {:f}s over {:d} call{:s},"+
+                      " avg: {:f}s")\
+                      .format(p[1],p[2],
+                              ("" if p[2] == 1 else "s"),
+                              p[3])
     return stats
 
 def abridge_args (fnstring, abridge_len, s):
@@ -83,25 +87,30 @@ def abridge_args (fnstring, abridge_len, s):
         splitter = ")("
     if splitter not in fnstring:
         return fnstring
-    if (len(fnstring.split(splitter)[splitat]) <= abridge_len):
+    if (len(fnstring.split(splitter)[splitat])
+        <= abridge_len):
         return fnstring
     else:
         parts = fnstring.split(splitter, 1)
         chunk = parts[1][:abridge_len]
         return parts[0] + splitter + chunk + \
-            (("" if ")" in chunk else "...)") if s == 1 else "...")
+            (("" if ")" in chunk else "...)") if s == 1
+             else "...")
 
 def prettify_trace (filename, depth=0, focus="MAIN",
                     show_origins=False, enum=False,
-                    timing_info="", abridge=1024, quiet=False):
-    split_rows=[r.split("(TRACE) ") for r in open(filename).readlines()]
+                    timing_info="", abridge=1024,
+                    quiet=False):
+    split_rows=[r.split("(TRACE) ")
+                for r in open(filename).readlines()]
     indent=0
     n=0
     ret_from = ""
     ret_elapsed = 0
     elapsed_frames = []
     frame_stack = [("MAIN", frame_time(split_rows[0])[1])]
-    fmt="{:"+str(int(math.ceil(math.log(len(split_rows), 10))))+"d}"
+    fmt="{:"+str(int(math.ceil(math.log
+         (len(split_rows), 10))))+"d}"
     for split_row in split_rows:
         s = step(split_row[1])
         action = abridge_args(split_row[1], abridge, s)
@@ -114,21 +123,26 @@ def prettify_trace (filename, depth=0, focus="MAIN",
                 r_ft = frame_stack.pop()
                 ret_from = r_ft[0]
                 ret_elapsed  = ft[1] - r_ft[1];
-                elapsed_frames.append((ret_from, ret_elapsed))
+                elapsed_frames.append((ret_from,
+                                       ret_elapsed))
             except:
-                print >> sys.stderr, "<< call stack anomaly at line",n,">>"
+                print >> sys.stderr, \
+                    "<< call stack anomaly at line",n,">>"
                 return
         ### Here's the noisy section:
-        if ((not quiet) and (depth == 0 or depth > indent) and
-            (focus in [ret_from]+[f[0] for f in frame_stack])):
+        if ((not quiet) and (depth == 0 or depth > indent)
+            and (focus in [ret_from]+
+                 [f[0] for f in frame_stack])):
             if (enum):
                 print fmt.format(n),
             print ("  "*max(0,indent))+action,
             if (s == -1):
-                print "[from "+ret_from+" after "+str(ret_elapsed)+"s]"
+                print "[from {:s} after {:.8f}s]"\
+                    .format(ret_from, ret_elapsed)
                 r=""
             elif (show_origins and len(frame_stack) > 1):
-                print "[from "+frame_stack[-2][0]+"]"
+                print "[from {:s}]"\
+                    .format(frame_stack[-2][0])
             else:
                 print
         ### End of noisy section ###
