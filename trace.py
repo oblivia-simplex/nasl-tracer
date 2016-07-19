@@ -1,9 +1,10 @@
 #! /usr/bin/env python2
 
+from __future__ import print_function
 # Developed by Olivia Lucca Fraser
 # for Tenable Network Security
 
-import sys
+import sys, os
 import argparse
 import math
 
@@ -90,20 +91,20 @@ def display_timing_info (listing, sortby):
     idx = 3
     if (sortby in ATTRIBUTES):
         idx = ATTRIBUTES.index(sortby)
-    print "\n-----------------------------------------------"
-    print " _____ _       _             ___       __     "
-    print "|_   _(_)_ __ (_)_ _  __ _  |_ _|_ _  / _|___ "
-    print "  | | | | '  \| | ' \/ _` |  | || ' \|  _/ _ \ "
-    print "  |_| |_|_|_|_|_|_||_\__, | |___|_||_|_| \___/ "
-    print "                     |___/"
-    print "-----------------------------------------------"
+    print ("\n-----------------------------------------------")
+    print (" _____ _       _             ___       __     ")
+    print ("|_   _(_)_ __ (_)_ _  __ _  |_ _|_ _  / _|___ ")
+    print ("  | | | | '  \| | ' \/ _` |  | || ' \|  _/ _ \ ")
+    print ("  |_| |_|_|_|_|_|_||_\__, | |___|_||_|_| \___/ ")
+    print ("                     |___/")
+    print ("-----------------------------------------------")
  
     for p in sorted(stats, key=(lambda e: e[idx])):
-        print p[0] + (": {:f}ms over {:d} call{:s},"+
+        print (p[0] + (": {:f}ms over {:d} call{:s},"+
                       " avg: {:f}ms")\
                       .format(p[1],p[2],
                               ("" if p[2] == 1 else "s"),
-                              p[3])
+                              p[3]))
     return stats
 
 def abridge_args (fnstring, abridge_len, s):
@@ -140,6 +141,15 @@ def offset(frame_stack, focii):
 def overlap(col1, col2):
     return not set(col1).isdisjoint(set(col2))
 
+def term_width():
+    try:
+        w = int(os.popen("stty size", "r").read().split()[1])
+    except:
+        w = 0
+    if (w == 0):
+        w = 60
+    return w
+
 def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
                     show_origins=False, enum=False,
                     timing_info="", abridge=1024,
@@ -151,7 +161,7 @@ def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
         fmt="{:"+str(int(math.ceil(math.log
             (len(split_rows), 10))))+"d}"
     except:
-        print >> sys.stderr, "Detected irregularity in data format. Check input."
+        sys.stderr.write("Detected irregularity in data format. Check input.\n")
         exit(1)
     # initialize some variables
     indent=0
@@ -160,11 +170,13 @@ def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
     ret_from = ""
     ret_elapsed = 0
     elapsed_frames = []
+    last_n = 0
+    width = term_width()-1
     for split_row in split_rows:
         s = step(split_row[1])
         action = abridge_args(split_row[1], abridge, s)
         ft = frame_time(split_row)
-        n += 1
+        n += 1 # line number
         if (s == 1): # 1 = call, -1 = ret, 0 = ?
             frame_stack.append(ft)
             off = offset(frame_stack, focii)
@@ -175,12 +187,11 @@ def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
                 ret_from = r_ft[0]
                 ret_elapsed  = ft[1] - r_ft[1];
                 if (overlap(focii, [ret_from]+[f[0] for f in frame_stack])):
-                    elapsed_frames.append((ret_from,
-                                           ret_elapsed))
+                    elapsed_frames.append((ret_from, ret_elapsed))
             except:
-                print >> sys.stderr, \
-                    colour('red','light')+"<< call stack anomaly at line",n,">>"+ \
-                    colour('reset')
+                sys.stderr.write(colour('red','light')+ \
+                                 "<< call stack anomaly at line",n,">>"+ \
+                                 colour('reset'))
                 return
         ### Here's the noisy section:
 #        print "frame_stack:",frame_stack,"\nfocus:",focus,"\noff: ",off,\
@@ -188,18 +199,23 @@ def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
             ### END DEBUG PRINT
         if ((not quiet) and (depth == 0 or depth >= off)
             and (overlap(focii, [ret_from]+[f[0] for f in frame_stack]))):
+            if (n != last_n+1):
+                print (colour('black','light')+"."*width)
+            last_n = n
             if (enum):
-                print colour('black','light')+fmt.format(n)+colour('reset'),
-            print rainbow(indent)+("  "*max(0,indent))+action+colour('reset'),
+                print (colour('black','light')+fmt.format(n)+colour('reset'),
+                       end=" "),
+            print (rainbow(indent)+("  "*max(0,indent))+ \
+                   action+colour('reset'), end=" "),
             if (s == -1):
-                print rainbow(indent,'dark')+"[from {:s} after {:.4f}ms]"\
-                    .format(ret_from, ret_elapsed) + colour('reset')
+                print (rainbow(indent,'dark')+"[from {:s} after {:.4f}ms]"\
+                    .format(ret_from, ret_elapsed) + colour('reset'))
                 ret_from=""
             elif (show_origins and len(frame_stack) > 1):
-                print rainbow(indent,'dark')+"[from {:s}]"\
-                    .format(frame_stack[-2][0]) + colour('reset')
+                print (rainbow(indent,'dark')+"[from {:s}]"\
+                       .format(frame_stack[-2][0]) + colour('reset'))
             else:
-                print
+                print ()
         ### End of noisy section ###
         indent += s
     if (timing_info):
@@ -242,8 +258,8 @@ def main ():
     COLOUR_ON = args.rainbow
     if (not args.functions):
         args.functions = ["MAIN"]
-    if (len(args.functions) > 1):
-        args.enum = True
+    # if (len(args.functions) > 1):
+    #     args.enum = True
     prettify_trace(filename=args.tracefile,
                    depth=args.depth,
                    focii=set(args.functions),
