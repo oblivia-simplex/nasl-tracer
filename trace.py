@@ -122,18 +122,25 @@ def abridge_args (fnstring, abridge_len, s):
         return parts[0] + splitter + chunk + \
             ("...)" if s == 1 else "...")
 
-def offset(frame_stack, focus):
+def offset(frame_stack, focii):
     # When finding the depth of detail to provide, we want to find this
     # relative to the most recent occurrence of the function in focus.
     # frame_stack[0] is ("MAIN",_)
-    fs = [x for (x, _) in frame_stack[::-1]]
-    if (focus in fs):
-    #    print "fs.index("+focus+") ==",fs.index(focus)
-        return fs.index(focus)
-    else:
-        return len(fs)
 
-def prettify_trace (filename, depth=0, focus="MAIN",
+    # first, find the most recent
+    fs = [x for (x, _) in frame_stack[::-1]]
+    off = 0
+    for frame in fs:
+        if (frame in focii):
+            return off
+        else:
+            off += 1
+    return len(fs)
+
+def overlap(col1, col2):
+    return not set(col1).isdisjoint(set(col2))
+
+def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
                     show_origins=False, enum=False,
                     timing_info="", abridge=1024,
                     quiet=False):
@@ -160,14 +167,14 @@ def prettify_trace (filename, depth=0, focus="MAIN",
         n += 1
         if (s == 1): # 1 = call, -1 = ret, 0 = ?
             frame_stack.append(ft)
-            off = offset(frame_stack, focus)
+            off = offset(frame_stack, focii)
         elif (s == -1):
             try:
-                off = offset(frame_stack, focus)
+                off = offset(frame_stack, focii)
                 r_ft = frame_stack.pop()
                 ret_from = r_ft[0]
                 ret_elapsed  = ft[1] - r_ft[1];
-                if (focus in [ret_from]+[f[0] for f in frame_stack]):
+                if (overlap(focii, [ret_from]+[f[0] for f in frame_stack])):
                     elapsed_frames.append((ret_from,
                                            ret_elapsed))
             except:
@@ -180,7 +187,7 @@ def prettify_trace (filename, depth=0, focus="MAIN",
 #            "\nindent: ",indent
             ### END DEBUG PRINT
         if ((not quiet) and (depth == 0 or depth >= off)
-            and (focus in [ret_from]+[f[0] for f in frame_stack])):
+            and (overlap(focii, [ret_from]+[f[0] for f in frame_stack]))):
             if (enum):
                 print colour('black','light')+fmt.format(n)+colour('reset'),
             print rainbow(indent)+("  "*max(0,indent))+action+colour('reset'),
@@ -212,11 +219,11 @@ def main ():
                         default=0,
                         help="how deep to peer into the call stack, relative"+
                         " to most recent occurrence of focus function.")
-    parser.add_argument("--function", "-f", metavar="<function name>",
-                        type=str,
-                        default="MAIN",
+    parser.add_argument("--functions", "-f", metavar="<function name>",
+                        type=str, action='append',
+                        default=[],
                         help="if you would like to restrict the"+
-                        " view to just one function, name it")
+                        " view to just one set of function, list them")
     parser.add_argument("--sources", "-s", action="store_true", default=False,
                       help="display the name of the function from which each"+
                       " function is called")
@@ -233,9 +240,13 @@ def main ():
                         help="colour-code the call stack")
     args = parser.parse_args()
     COLOUR_ON = args.rainbow
+    if (not args.functions):
+        args.functions = ["MAIN"]
+    if (len(args.functions) > 1):
+        args.enum = True
     prettify_trace(filename=args.tracefile,
                    depth=args.depth,
-                   focus=args.function,
+                   focii=set(args.functions),
                    show_origins=args.sources,
                    enum=args.enum,
                    quiet=args.quiet,
