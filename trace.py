@@ -1,9 +1,9 @@
 #! /usr/bin/env python2
 
-from __future__ import print_function
 # Developed by Olivia Lucca Fraser
 # for Tenable Network Security
 
+from __future__ import print_function
 import sys, os
 import argparse
 import math
@@ -37,15 +37,6 @@ def rainbow(indent, light='light'):
     l = len(RAINBOW)
     return colour(RAINBOW[indent % l],light)
 
-def attribute_string ():
-    global ATTRIBUTES
-    s = "<"
-    for attr in ATTRIBUTES:
-        s += attr
-        s += "|"
-    s = s[:-1] + ">"
-    return s
-
 def step(row):
     call_or_ret=row.split(" ")[0]
     if (call_or_ret == "call"):
@@ -64,7 +55,6 @@ def frame_time(split_row):
         frame_name = "INTERNAL"
     return (frame_name, timestamp)
 
-
 def calc_timing_info(elapsed_frames):
     """Each frame is an tuple (frame_name, elapsed_time)"""
     times = {}
@@ -81,9 +71,7 @@ def calc_timing_info(elapsed_frames):
     for fname in times.keys():
         avg = times[fname][0] / times[fname][1]
         by_avg.append((fname, times[fname][0], times[fname][1], avg))
-
     return by_avg
-
 
 def display_timing_info (listing, sortby):
     global ATTRIBUTES
@@ -109,10 +97,10 @@ def display_timing_info (listing, sortby):
     print (locol)
 
     for p in sorted(stats, key=(lambda e: e[idx])):
-        print (locol + p[0] +
-               (": {:s}{:f}{:s}ms over {:s}{:d}{:s} call{:s},"+
+        print (("{:s}{:s}{:s}: {:s}{:f}{:s}ms over {:s}{:d}{:s} call{:s},"+
                 " avg: {:s}{:f}{:s}ms")\
-               .format(col[1],p[1],locol,
+               .format(col[0],p[0],locol,
+                       col[1],p[1],locol,
                        col[2],p[2],locol,
                        ("" if p[2] == 1 else "s"),
                        col[3],p[3],locol))
@@ -138,8 +126,6 @@ def offset(frame_stack, focii):
     # When finding the depth of detail to provide, we want to find this
     # relative to the most recent occurrence of the function in focus.
     # frame_stack[0] is ("MAIN",_)
-
-    # first, find the most recent
     fs = [x for (x, _) in frame_stack[::-1]]
     off = 0
     for frame in fs:
@@ -239,6 +225,15 @@ def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
         display_timing_info(elapsed_frames, timing_info)
 
     return
+
+def attribute_string ():
+    global ATTRIBUTES
+    s = "<"
+    for attr in ATTRIBUTES:
+        s += attr
+        s += "|"
+    s = s[:-1] + ">"
+    return s
 
 def main ():
     global COLOUR_ON
