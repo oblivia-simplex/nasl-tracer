@@ -91,10 +91,12 @@ def display_timing_info (listing, sortby):
     idx = 3
     if (sortby in ATTRIBUTES):
         idx = ATTRIBUTES.index(sortby)
-    col = [colour('cyan','light') if n == idx else colour('cyan','dark')
+    hue = 'cyan'
+    locol = colour(hue, 'dark')
+    hicol = colour(hue, 'light')
+    col = [hicol if n == idx else lowcol
            for n in range(len(ATTRIBUTES))]
-    defcol = colour('cyan','dark')
-    print (defcol)
+    print (hicol)
     print ("\n-----------------------------------------------")
     print (" _____ _       _             ___       __     ")
     print ("|_   _(_)_ __ (_)_ _  __ _  |_ _|_ _  / _|___ ")
@@ -102,7 +104,8 @@ def display_timing_info (listing, sortby):
     print ("  |_| |_|_|_|_|_|_||_\__, | |___|_||_|_| \___/ ")
     print ("                     |___/")
     print ("-----------------------------------------------")
- 
+    print (locol)
+    
     for p in sorted(stats, key=(lambda e: e[idx])):
         print (p[0] + (": {:s}{:f}{:s}ms over {:s}{:d}{:s} call{:s},"+
                       " avg: {:s}{:f}{:s}ms")\
