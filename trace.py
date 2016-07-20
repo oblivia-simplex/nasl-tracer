@@ -153,7 +153,7 @@ def term_width():
 def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
                     show_origins=False, enum=False,
                     timing_info="", abridge=1024,
-                    quiet=False):
+                    quiet=False, ignore=[]):
     try:
         split_rows=[r.split("(TRACE) ")
                     for r in open(filename).readlines()]
@@ -163,6 +163,7 @@ def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
     except:
         sys.stderr.write("Detected irregularity in data format. Check input.\n")
         exit(1)
+
     # initialize some variables
     indent=0
     n=0
@@ -171,7 +172,9 @@ def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
     ret_elapsed = 0
     elapsed_frames = []
     last_n = 0
-    width = term_width()-1
+    width = term_width()
+    live_frames = (lambda : [ret_from]+[f[0] for f in frame_stack])
+
     for split_row in split_rows:
         s = step(split_row[1])
         action = abridge_args(split_row[1], abridge, s)
@@ -186,21 +189,24 @@ def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
                 r_ft = frame_stack.pop()
                 ret_from = r_ft[0]
                 ret_elapsed  = ft[1] - r_ft[1];
-                if (overlap(focii, [ret_from]+[f[0] for f in frame_stack])):
+                if (overlap(focii, live_frames())):
                     elapsed_frames.append((ret_from, ret_elapsed))
-            except:
+            except Exception as e:
                 sys.stderr.write(colour('red','light')+ \
-                                 "<< call stack anomaly at line",n,">>"+ \
-                                 colour('reset'))
+                                 "<< call stack anomaly at line",n,">>\n"+ \
+                                 str(e) + "\n" + colour('reset'))
                 return
         ### Here's the noisy section:
 #        print "frame_stack:",frame_stack,"\nfocus:",focus,"\noff: ",off,\
 #            "\nindent: ",indent
             ### END DEBUG PRINT
-        if ((not quiet) and (depth == 0 or depth >= off)
-            and (overlap(focii, [ret_from]+[f[0] for f in frame_stack]))):
+
+        if ((not quiet)
+            and (depth == 0 or depth >= off)
+            and (overlap(focii, live_frames()))
+            and (not overlap(ignore, live_frames()))):
             if (n != last_n+1):
-                print (colour('black','light')+"."*width)
+                print (colour('black','light')+'-'*(width), end='\n')
             last_n = n
             if (enum):
                 print (colour('black','light')+fmt.format(n)+colour('reset'),
@@ -240,6 +246,10 @@ def main ():
                         default=[],
                         help="if you would like to restrict the"+
                         " view to just one set of function, list them")
+    parser.add_argument("--ignore", "-i", metavar="<function name>",
+                        type=str, action='append', default=[],
+                        help="if you would like to ignore any functions, "+
+                        "specify them here.")
     parser.add_argument("--sources", "-s", action="store_true", default=False,
                       help="display the name of the function from which each"+
                       " function is called")
@@ -263,6 +273,7 @@ def main ():
     prettify_trace(filename=args.tracefile,
                    depth=args.depth,
                    focii=set(args.functions),
+                   ignore=set(args.ignore),
                    show_origins=args.sources,
                    enum=args.enum,
                    quiet=args.quiet,
