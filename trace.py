@@ -91,6 +91,10 @@ def display_timing_info (listing, sortby):
     idx = 3
     if (sortby in ATTRIBUTES):
         idx = ATTRIBUTES.index(sortby)
+    col = [colour('cyan','light') if n == idx else colour('cyan','dark')
+           for n in range(len(ATTRIBUTES))]
+    defcol = colour('cyan','dark')
+    print (defcol)
     print ("\n-----------------------------------------------")
     print (" _____ _       _             ___       __     ")
     print ("|_   _(_)_ __ (_)_ _  __ _  |_ _|_ _  / _|___ ")
@@ -100,11 +104,12 @@ def display_timing_info (listing, sortby):
     print ("-----------------------------------------------")
  
     for p in sorted(stats, key=(lambda e: e[idx])):
-        print (p[0] + (": {:f}ms over {:d} call{:s},"+
-                      " avg: {:f}ms")\
-                      .format(p[1],p[2],
+        print (p[0] + (": {:s}{:f}{:s}ms over {:s}{:d}{:s} call{:s},"+
+                      " avg: {:s}{:f}{:s}ms")\
+                      .format(col[1],p[1],defcol,
+                              col[2],p[2],defcol,
                               ("" if p[2] == 1 else "s"),
-                              p[3]))
+                              col[3],p[3],defcol))
     return stats
 
 def abridge_args (fnstring, abridge_len, s):
@@ -188,7 +193,11 @@ def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
                 off = offset(frame_stack, focii)
                 r_ft = frame_stack.pop()
                 ret_from = r_ft[0]
-                ret_elapsed  = ft[1] - r_ft[1];
+                ret_elapsed  = ft[1] - r_ft[1]
+                if (ret_elapsed < 0):
+                    ## Let's just say these represent glitches in nasl -T
+                    ## for now, or are some artifact of threading.
+                    ret_elapsed = 0
                 if (overlap(focii, live_frames())):
                     elapsed_frames.append((ret_from, ret_elapsed))
             except Exception as e:
