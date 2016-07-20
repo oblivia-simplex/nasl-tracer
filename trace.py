@@ -88,14 +88,16 @@ def calc_timing_info(elapsed_frames):
 def display_timing_info (listing, sortby):
     global ATTRIBUTES
     stats = calc_timing_info(listing)
-    idx = 3
     if (sortby in ATTRIBUTES):
         idx = ATTRIBUTES.index(sortby)
+    else:
+        idx = 3
     hue = 'cyan'
     locol = colour(hue, 'dark')
     hicol = colour(hue, 'light')
     col = [hicol if n == idx else locol
            for n in range(len(ATTRIBUTES))]
+
     print (hicol)
     print ("\n-----------------------------------------------")
     print (" _____ _       _             ___       __     ")
@@ -236,7 +238,7 @@ def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
     if (timing_info):
         display_timing_info(elapsed_frames, timing_info)
 
-
+    return
 
 def main ():
     global COLOUR_ON
