@@ -197,10 +197,6 @@ def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
                                  str(e) + "\n" + colour('reset'))
                 return
         ### Here's the noisy section:
-#        print "frame_stack:",frame_stack,"\nfocus:",focus,"\noff: ",off,\
-#            "\nindent: ",indent
-            ### END DEBUG PRINT
-
         if ((not quiet)
             and (depth == 0 or depth >= off)
             and (overlap(focii, live_frames()))
