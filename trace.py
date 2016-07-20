@@ -94,7 +94,7 @@ def display_timing_info (listing, sortby):
     hue = 'cyan'
     locol = colour(hue, 'dark')
     hicol = colour(hue, 'light')
-    col = [hicol if n == idx else lowcol
+    col = [hicol if n == idx else locol
            for n in range(len(ATTRIBUTES))]
     print (hicol)
     print ("\n-----------------------------------------------")
@@ -105,14 +105,15 @@ def display_timing_info (listing, sortby):
     print ("                     |___/")
     print ("-----------------------------------------------")
     print (locol)
-    
+
     for p in sorted(stats, key=(lambda e: e[idx])):
-        print (p[0] + (": {:s}{:f}{:s}ms over {:s}{:d}{:s} call{:s},"+
-                      " avg: {:s}{:f}{:s}ms")\
-                      .format(col[1],p[1],defcol,
-                              col[2],p[2],defcol,
-                              ("" if p[2] == 1 else "s"),
-                              col[3],p[3],defcol))
+        print (locol + p[0] +
+               (": {:s}{:f}{:s}ms over {:s}{:d}{:s} call{:s},"+
+                " avg: {:s}{:f}{:s}ms")\
+               .format(col[1],p[1],locol,
+                       col[2],p[2],locol,
+                       ("" if p[2] == 1 else "s"),
+                       col[3],p[3],locol))
     return stats
 
 def abridge_args (fnstring, abridge_len, s):
