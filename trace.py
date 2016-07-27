@@ -163,9 +163,10 @@ def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
 
     # initialize some variables
     indent=0
+    tab=' '*2
     n=0
     off = 0 # offset
-    ret_from = ""
+    ret_from = ''
     ret_elapsed = 0
     elapsed_frames = []
     last_n = 0
@@ -208,12 +209,13 @@ def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
             if (enum):
                 print (colour('black','light')+fmt.format(n)+colour('reset'),
                        end=" "),
-            print (rainbow(indent)+("  "*max(0,indent))+ \
+            print (rainbow(indent)+(tab*max(0,indent))+ \
                    action+colour('reset'), end=" "),
-            if (s == -1):
-                print (rainbow(indent,'dark')+"[from {:s} after {:.4f}ms]"\
-                    .format(ret_from, ret_elapsed) + colour('reset'))
-                ret_from=""
+            if (s == -1): # if action is ret
+                print (rainbow(indent,'dark')+"[from {:s}".format(ret_from) + \
+                       (" after {:.4f}ms]".format(ret_elapsed) if timing_info else "]")\
+                    + colour('reset'))
+                ret_from=''
             elif (show_origins and len(frame_stack) > 1):
                 print (rainbow(indent,'dark')+"[from {:s}]"\
                        .format(frame_stack[-2][0]) + colour('reset'))
