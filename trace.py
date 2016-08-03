@@ -186,7 +186,7 @@ def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
             if (last_active_plugin != "" and active_plugin != last_active_plugin):
                 frame_stack[:] = [("MAIN", frame_time(split_row)[1])]
                 off = 0
-                raw_input("[HIT ENTER]")
+                # raw_input("[HIT ENTER]")
         n += 1 # line number
         if (s == 1): # 1 = call, -1 = ret, 0 = ?
             frame_stack.append(ft)
