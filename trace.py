@@ -150,13 +150,12 @@ def term_width():
 def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
                     show_origins=False, enum=False,
                     timing_info="", abridge=1024,
-                    quiet=False, ignore=[]):
+                    quiet=False, ignore=[], show_plugin=False):
     try:
-        split_rows=[r.split("(TRACE) ")
-                    for r in open(filename).readlines()]
-        frame_stack = [("MAIN", frame_time(split_rows[0])[1])]
+        rows=[r for r in open(filename).readlines()]
+        frame_stack = [] # [("MAIN", frame_time(split_rows[0])[1])]
         fmt="{:"+str(int(math.ceil(math.log
-            (len(split_rows), 10))))+"d}"
+            (len(rows), 10))))+"d}"
     except:
         sys.stderr.write("Detected irregularity in data format. Check input.\n")
         exit(1)
@@ -169,14 +168,25 @@ def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
     ret_from = ''
     ret_elapsed = 0
     elapsed_frames = []
+    active_plugin = ""
     last_n = 0
     width = term_width()
     live_frames = (lambda : [ret_from]+[f[0] for f in frame_stack])
 
-    for split_row in split_rows:
+    for row in rows:
+        split_row = row.split("(TRACE) ")
+        if (not frame_stack):
+            frame_stack = [("MAIN", frame_time(split_row)[1])]
         s = step(split_row[1])
         action = abridge_args(split_row[1], abridge, s)
         ft = frame_time(split_row)
+        if (show_plugin):
+            last_active_plugin = active_plugin
+            active_plugin = split_row[0].split(',')[0][1:]+' '
+            if (last_active_plugin != "" and active_plugin != last_active_plugin):
+                frame_stack[:] = [("MAIN", frame_time(split_row)[1])]
+                off = 0
+                raw_input("[HIT ENTER]")
         n += 1 # line number
         if (s == 1): # 1 = call, -1 = ret, 0 = ?
             frame_stack.append(ft)
@@ -199,28 +209,32 @@ def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
                                  str(e) + "\n" + colour('reset'))
                 return
         ### Here's the noisy section:
-        if ((not quiet)
-            and (depth == 0 or depth >= off)
-            and (overlap(focii, live_frames()))
-            and (not overlap(ignore, live_frames()))):
-            if (n != last_n+1):
-                print (colour('black','light')+'-'*(width), end='\n')
-            last_n = n
-            if (enum):
-                print (colour('black','light')+fmt.format(n)+colour('reset'),
-                       end=" "),
-            print (rainbow(indent)+(tab*max(0,indent))+ \
-                   action+colour('reset'), end=" "),
-            if (s == -1): # if action is ret
-                print (rainbow(indent,'dark')+"[from {:s}".format(ret_from) + \
-                       (" after {:.4f}ms]".format(ret_elapsed) if timing_info else "]")\
-                    + colour('reset'))
-                ret_from=''
-            elif (show_origins and len(frame_stack) > 1):
-                print (rainbow(indent,'dark')+"[from {:s}]"\
-                       .format(frame_stack[-2][0]) + colour('reset'))
-            else:
-                print ()
+        try:
+            if ((not quiet)
+                and (depth == 0 or depth >= off)
+                and (overlap(focii, live_frames()))
+                and (not overlap(ignore, live_frames()))):
+                if (n != last_n+1):
+                    print (colour('black','light')+'-'*(width), end='\n')
+                last_n = n
+                if (enum):
+                    print (colour('black','light')+active_plugin+\
+                           fmt.format(n)+colour('reset'),
+                           end=" "),
+                print (rainbow(indent)+(tab*max(0,indent))+ \
+                       action+colour('reset'), end=" "),
+                if (s == -1): # if action is ret
+                    print (rainbow(indent,'dark')+"[from {:s}".format(ret_from) + \
+                           (" after {:.4f}ms]".format(ret_elapsed) if timing_info else "]")\
+                           + colour('reset'))
+                    ret_from=''
+                elif (show_origins and len(frame_stack) > 1):
+                    print (rainbow(indent,'dark')+"[from {:s}]"\
+                           .format(frame_stack[-2][0]) + colour('reset'))
+                else:
+                    print ()
+        except IOError: # so that the tool plays nicely with pipes
+            exit() 
         ### End of noisy section ###
         indent += s
     if (timing_info):
@@ -272,6 +286,8 @@ def main ():
                         "than <n> characters", metavar="<n>")
     parser.add_argument("--rainbow", "-r", action="store_true", default=False,
                         help="colour-code the call stack")
+    parser.add_argument("--plugin", "-p", action="store_true",
+                        help="display the active plugin in left margin")
     args = parser.parse_args()
     COLOUR_ON = args.rainbow
     if (not args.functions):
@@ -286,6 +302,7 @@ def main ():
                    enum=args.enum,
                    quiet=args.quiet,
                    abridge=args.abridge,
+                   show_plugin=args.plugin,
                    timing_info=args.timing)
 
 if __name__ == "__main__":
