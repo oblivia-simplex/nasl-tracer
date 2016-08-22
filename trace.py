@@ -46,6 +46,9 @@ def step(row):
     else:
         return 0
 
+def ret_val(row):
+    return row.split(" ")[2]
+
 def frame_time(split_row):
     """Returns the tuple (frame_name, elapsed_time)"""
     timestamp = eval(split_row[0].split(",")[2].replace("]",""))*1000
@@ -168,12 +171,18 @@ def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
     ret_from = ''
     ret_elapsed = 0
     elapsed_frames = []
+    fork_stack = [] # [frame_stack, frame_stack]
     active_plugin = ""
+    forking = False
     last_n = 0
     width = term_width()
     live_frames = (lambda : [ret_from]+[f[0] for f in frame_stack])
 
     for row in rows:
+        #Exclude output and file transition lines
+        if (row[0] != '[') :
+            continue
+
         split_row = row.split("(TRACE) ")
         if (not frame_stack):
             frame_stack = [("MAIN", frame_time(split_row)[1])]
@@ -191,23 +200,34 @@ def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
         if (s == 1): # 1 = call, -1 = ret, 0 = ?
             frame_stack.append(ft)
             off = offset(frame_stack, focii)
+            if (ft[0] == "fork" or ft[0] == "fork_ex" or ft[0] == "get_kb_item") :
+                forking = True
         elif (s == -1):
-            try:
-                off = offset(frame_stack, focii)
-                r_ft = frame_stack.pop()
-                ret_from = r_ft[0]
-                ret_elapsed  = ft[1] - r_ft[1]
-                if (ret_elapsed < 0):
-                    ## Let's just say these represent glitches in nasl -T
-                    ## for now, or are some artifact of threading.
-                    ret_elapsed = 0
-                if (overlap(focii, live_frames())):
-                    elapsed_frames.append((ret_from, ret_elapsed))
-            except Exception as e:
-                sys.stderr.write(colour('red','light')+ \
-                                 "<< call stack anomaly at line",n,">>\n"+ \
+            ret = split_row[1].split(" ")[2]
+            if(forking == True and len(ret.strip()) == 0) :
+                fork_stack.append(frame_stack)
+                continue
+            else :
+                forking = False
+                try:
+                    if(off == 0 and len(fork_stack) > 0) :  #We are returning from main
+                        frame_stack = fork_stack.pop()
+                        s = len(frame_stack) - 1
+                    off = offset(frame_stack, focii)
+                    r_ft = frame_stack.pop()
+                    ret_from = r_ft[0]
+                    ret_elapsed  = ft[1] - r_ft[1]
+                    if (ret_elapsed < 0):
+                        ## Let's just say these represent glitches in nasl -T
+                        ## for now, or are some artifact of threading.
+                        ret_elapsed = 0
+                    if (overlap(focii, live_frames())):
+                        elapsed_frames.append((ret_from, ret_elapsed))
+                except Exception as e:
+                    sys.stderr.write(colour('red','light')+ \
+                                 "<< call stack anomaly at line" + str(n) + ">>\n"+ \
                                  str(e) + "\n" + colour('reset'))
-                return
+                    return
         ### Here's the noisy section:
         try:
             if ((not quiet)
