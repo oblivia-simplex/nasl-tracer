@@ -46,9 +46,6 @@ def step(row):
     else:
         return 0
 
-def ret_val(row):
-    return row.split(" ")[2]
-
 def frame_time(split_row):
     """Returns the tuple (frame_name, elapsed_time)"""
     timestamp = eval(split_row[0].split(",")[2].replace("]",""))*1000
