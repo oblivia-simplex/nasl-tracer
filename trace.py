@@ -38,13 +38,15 @@ def rainbow(indent, light='light'):
     return colour(RAINBOW[indent % l],light)
 
 def step(row):
-    call_or_ret=row.split(" ")[0]
-    if (call_or_ret == "call"):
-        return 1
-    elif (call_or_ret == "ret"):
-        return -1
-    else:
-        return 0
+        row_info = row.split(" ")
+        fn_name = row_info[1].split("(")[0]
+        call_or_ret=row_info[0]
+        if (call_or_ret == "call" and not fn_name == "exit"):
+            return 1
+        elif (call_or_ret == "ret" or fn_name == "exit"):
+            return -1
+        else:
+            return 0
 
 def frame_time(split_row):
     """Returns the tuple (frame_name, elapsed_time)"""
@@ -202,15 +204,16 @@ def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
         elif (s == -1):
             ret = split_row[1].split(" ")[2]
             if(forking == True and len(ret.strip()) == 0) :
-                fork_stack.append(frame_stack)
+                fork_stack.append(frame_stack[:])
                 continue
             else :
                 forking = False
                 try:
+                    off = offset(frame_stack, focii)
                     if(off == 0 and len(fork_stack) > 0) :  #We are returning from main
                         frame_stack = fork_stack.pop()
-                        s = len(frame_stack) - 1
-                    off = offset(frame_stack, focii)
+                        s = len(frame_stack) - 2
+                        off = offset(frame_stack, focii)
                     r_ft = frame_stack.pop()
                     ret_from = r_ft[0]
                     ret_elapsed  = ft[1] - r_ft[1]
