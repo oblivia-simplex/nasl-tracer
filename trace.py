@@ -158,8 +158,8 @@ def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
         frame_stack = [] # [("MAIN", frame_time(split_rows[0])[1])]
         fmt="{:"+str(int(math.ceil(math.log
             (len(rows), 10))))+"d}"
-    except:
-        sys.stderr.write("Detected irregularity in data format. Check input.\n")
+    except Exception as e:
+        sys.stderr.write("Detected irregularity in data format. Check input.\n" + str(e))
         exit(1)
 
     # initialize some variables
@@ -173,6 +173,8 @@ def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
     fork_stack = [] # [frame_stack, frame_stack]
     active_plugin = ""
     forking = False
+    fork_call = ''
+    fork_ret_count = 0
     last_n = 0
     width = term_width()
     live_frames = (lambda : [ret_from]+[f[0] for f in frame_stack])
@@ -201,33 +203,39 @@ def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
             off = offset(frame_stack, focii)
             if (ft[0] == "fork" or ft[0] == "fork_ex" or ft[0] == "get_kb_item") :
                 forking = True
+                fork_call = ft[0]
+                fork_count = 0
         elif (s == -1):
             ret = split_row[1].split(" ")[2]
-            if(forking == True and len(ret.strip()) == 0) :
-                fork_stack.append(frame_stack[:])
-                continue
-            else :
-                forking = False
-                try:
+            if(forking == True) :
+                if(len(ret.strip()) == 0):
+                    if(not(fork_call == "get_kb_item") or (fork_count == 1)) :
+                        fork_stack.append(frame_stack[:])
+                        continue
+                    if(fork_call == "get_kb_item") :
+                        fork_count = 1
+                else:
+                    forking = False
+            try:
+                off = offset(frame_stack, focii)
+                if(off == 0 and len(fork_stack) > 0) :  #We are returning from main
+                    frame_stack = fork_stack.pop()
+                    s = len(frame_stack) - 2
                     off = offset(frame_stack, focii)
-                    if(off == 0 and len(fork_stack) > 0) :  #We are returning from main
-                        frame_stack = fork_stack.pop()
-                        s = len(frame_stack) - 2
-                        off = offset(frame_stack, focii)
-                    r_ft = frame_stack.pop()
-                    ret_from = r_ft[0]
-                    ret_elapsed  = ft[1] - r_ft[1]
-                    if (ret_elapsed < 0):
-                        ## Let's just say these represent glitches in nasl -T
-                        ## for now, or are some artifact of threading.
-                        ret_elapsed = 0
-                    if (overlap(focii, live_frames())):
-                        elapsed_frames.append((ret_from, ret_elapsed))
-                except Exception as e:
-                    sys.stderr.write(colour('red','light')+ \
+                r_ft = frame_stack.pop()
+                ret_from = r_ft[0]
+                ret_elapsed  = ft[1] - r_ft[1]
+                if (ret_elapsed < 0):
+                    ## Let's just say these represent glitches in nasl -T
+                    ## for now, or are some artifact of threading.
+                    ret_elapsed = 0
+                if (overlap(focii, live_frames())):
+                    elapsed_frames.append((ret_from, ret_elapsed))
+            except Exception as e:
+                sys.stderr.write(colour('red','light')+ \
                                  "<< call stack anomaly at line" + str(n) + ">>\n"+ \
                                  str(e) + "\n" + colour('reset'))
-                    return
+                return
         ### Here's the noisy section:
         try:
             if ((not quiet)
