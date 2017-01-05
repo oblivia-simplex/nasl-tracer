@@ -236,7 +236,7 @@ def prettify_trace (filename, depth=0, focii=set(["MAIN"]),
         except IOError: # so that the tool plays nicely with pipes
             exit() 
         ### End of noisy section ###
-        indent += s
+        indent = max(0, indent + s)
     if (timing_info):
         display_timing_info(elapsed_frames, timing_info)
 
