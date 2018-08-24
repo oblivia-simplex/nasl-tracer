@@ -7,6 +7,7 @@ from __future__ import print_function
 import sys, os
 import argparse
 import math
+import re
 
 ATTRIBUTES = ["name", "total", "frequency", "average"]
 COLOUR_ON = False
@@ -48,7 +49,8 @@ def step(row):
 
 def frame_time(split_row):
     """Returns the tuple (frame_name, elapsed_time)"""
-    timestamp = eval(split_row[0].split(",")[2].replace("]",""))*1000
+    timestamp_s = re.findall(pattern=', ([0-9.]+)(?:(?: \([0-9]+usec\))?|\])', string=split_row[0])
+    timestamp = float(timestamp_s[0]) * 1000
     row = split_row[1]
     frame_name = row.split(" ")[1].split("(")[0]
     if (frame_name == ""):
